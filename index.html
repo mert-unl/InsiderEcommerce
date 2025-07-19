@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <title>Insider e-Shop</title>
+  </head>
+  <body>
+    <h1>Insider e-Shop</h1>
+
+    <div id="carousel">Carousel</div>
+
+    <h3>Products</h3>
+    <div
+      id="productList"
+      style="
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        margin-top: 20px;
+      "
+    ></div>
+
+    <h3>Your Cart</h3>
+    <div
+      id="sepet"
+      style="
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        margin-top: 20px;
+      "
+    ></div>
+    <div id="buyAndClearButtons" style="display: none"></div>
+    <script>
+      $.ajax({
+        url: "https://fakestoreapi.com/products",
+        method: "GET",
+        success: (products) => {
+          //ajaxdan çektiğim her bir veri için each kullandım
+          $.each(products, (i, product) => {
+            const doluYildiz = Math.round(product.rating.rate);
+            const yildiz = "★".repeat(doluYildiz) + "☆".repeat(5 - doluYildiz);
+
+            const productHtml = `
+                      <div class="product-card"
+                        style="
+                        border:1px solid #ccc;
+                        padding:10px;
+                        width:250px;
+                        border-radius:12px;
+                        box-shadow:0 0 10px #023ffa;
+                        margin-top:20px;" >
+
+                        <img src="${
+                          product.image
+                        }" alt="Image didn't load" width="100" height="200"/>
+                         <h3>${product.title}</h3>
+                         <p>${product.description.substring(0, 100)}...</p>
+
+                         <p class="price">${
+                           product.price
+                         } $ </p>  <div class="rate-div"
+                          style="
+                          display:flex;
+                          flex-direction:row;
+                          gap:1rem;
+                          " >
+                           <p>${product.rating.rate}</p>
+                                <p>${yildiz}</p>
+                           <p>${product.rating.count}</p>
+                          </div>
+
+                         <button class="addCartButon">Add Cart</button>
+                      </div>
+                   `;
+
+            $("#productList").append(productHtml);
+          });
+        },
+        /*hala ajax içinde error*/
+        error: () => {
+          $("#productList").html("<p> Product didnt load. </p>");
+        },
+      });
+
+      $(document).ready(() => {
+        console.log("sayfa hazır");
+
+        //this olduğu zaman arrow func kullanılmıyor yeni öğrendim
+        $("#productList").on("click", ".addCartButon", function () {
+          const productCard = $(this).closest(".product-card");
+
+          const copyCard = productCard.clone();
+          copyCard.find(".addCartButon").remove();
+          $("#sepet").append(copyCard.hide().slideDown());
+
+          copyCard.css({
+            transform: "scale(0.8)",
+            opacity: "0.7",
+            border: "1px solid green",
+          });
+
+          //localStrorage için
+          const productTitle = productCard.find("h3").text();
+          const productPrice = productCard.find(".price").text();
+          const cartItems =
+            JSON.parse(localStorage.getItem("sepetimLocal")) || [];
+
+          cartItems.push({
+            title: productTitle,
+            price: productPrice,
+          });
+
+          localStorage.setItem("sepetimLocal", JSON.stringify(cartItems));
+
+          $(document).on("click", "#purchase", function () {
+            //toast ile değiştir yarın
+            alert("Purchase completed!");
+
+            localStorage.removeItem("sepetimLocal");
+            $("#sepet").empty().append("<p>Your cart is empty.</p>");
+          });
+
+          $(document).on("click", "#clear", function () {
+            //toast ile değiştir yarın
+            alert("Cart is cleared.");
+
+            localStorage.removeItem("sepetimLocal");
+            $("#sepet").empty().append("<p>Your cart is empty.</p>");
+          });
+
+          const cartButtons = `
+         <div>
+           <button id="purchase">Purchase All</button>
+           <button id="clear">Clear Cart</button>
+        </div>
+       `;
+
+          if (
+            $("#purchase").length === 0 &&
+            $("#clear").length === 0 &&
+            cartItems.length > 0
+          ) {
+            $("#buyAndClearButtons").show();
+            $("#buyAndClearButtons").append(cartButtons);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
