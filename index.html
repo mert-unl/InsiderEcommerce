@@ -5,146 +5,631 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script>
+
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"
+    />
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/toastify-js"
+    ></script>
+
     <title>Insider e-Shop</title>
   </head>
+
   <body>
-    <h1>Insider e-Shop</h1>
+    <style>
+      /*fontu bul ekle*/
+      body {
+        background-color: rgba(253, 237, 206, 0.555);
+        margin: 0;
+        padding-top: 80px;
+        font-family: Arial, sans-serif;
+      }
 
-    <div id="carousel">Carousel</div>
+      button {
+        background: transparent;
+        border: none;
+        color: rgb(255, 255, 255);
+        background-color: rgb(255, 123, 0);
+        font-size: 16px;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+      }
 
-    <h3>Products</h3>
+      button:hover {
+        background-color: rgba(32, 145, 238, 0.842);
+        transform: translateY(-2px);
+      }
+
+      .product-card {
+        transition: transform 0.3s ease;
+      }
+
+      .product-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .heart-filled {
+        color: red !important;
+      }
+    </style>
+
     <div
-      id="productList"
+      id="toolbar"
       style="
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        margin-top: 20px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: #333;
+        color: white;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 1rem 2rem;
+        z-index: 10;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
       "
-    ></div>
+    >
+      <h1>Insider e-Shop</h1>
 
-    <h3>Your Cart</h3>
-    <div
-      id="sepet"
-      style="
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        margin-top: 20px;
-      "
-    ></div>
-    <div id="buyAndClearButtons" style="display: none"></div>
+      <div style="margin-right: 12rem; display: flex; gap: 1rem">
+        <button id="productButton">
+          <i class="fa-solid fa-house"></i> Products
+        </button>
+        <button id="favButton">
+          <i class="fa-solid fa-heart"></i> Favorites (<span id="favCount"
+            >0</span
+          >)
+        </button>
+        <button id="cartButton">
+          <i class="fa-solid fa-cart-shopping"></i> Your Cart (<span
+            id="cartCount"
+            >0</span
+          >)
+        </button>
+      </div>
+    </div>
+
+    <!--carousel-->
+    <div style="max-width: 80%; margin: 100px auto; padding: 20px">
+      <div class="carousel">
+        <h2>Most Sellers</h2>
+        <div class="slider" style="margin: 20px 0"></div>
+        <div class="slider-arrows">
+          <button class="custom-prev">← Previous</button>
+          <button class="custom-next">Next →</button>
+        </div>
+      </div>
+
+      <section id="productSection">
+        <h3>Products</h3>
+        <div
+          class="productList"
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 20px;
+          "
+        ></div>
+      </section>
+
+      <section id="favSection">
+        <h3>Favorites</h3>
+        <div
+          class="favorites"
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+          "
+        ></div>
+      </section>
+
+      <section id="cartSection">
+        <h3>Your Cart</h3>
+        <div
+          class="sepet"
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+          "
+        ></div>
+      </section>
+
+      <div
+        class="buyAndClearButtons"
+        style="display: none; margin: 20px 0; text-align: center"
+      >
+        <p class="totalPriceDisplay" style="font-size: 24px; font-weight: bold">
+          Total: 0.00 $
+        </p>
+        <button class="purchase" style="margin: 0 10px">
+          <i class="fa-solid fa-credit-card"></i> Purchase All
+        </button>
+        <button class="clear" style="margin: 0 10px">
+          <i class="fa-solid fa-trash"></i> Clear Cart
+        </button>
+      </div>
+    </div>
+
     <script>
+      // ürünleri tek tek çekmek yerine direkt buray atıcam
+      let allProducts = [];
+      let totalPrice = 0;
+
+      // local obje fonksiyonları
+      const StorageManager = {
+        saveCartLocal: (cart) =>
+          localStorage.setItem("sepetimLocal", JSON.stringify(cart)),
+        saveFavLocal: (favorites) =>
+          localStorage.setItem("favoritesLocal", JSON.stringify(favorites)),
+
+        getCartLocal: () =>
+          JSON.parse(localStorage.getItem("sepetimLocal")) || [],
+        getFavLocal: () =>
+          JSON.parse(localStorage.getItem("favoritesLocal")) || [],
+
+        addToCart: (product) => {
+          const cart = StorageManager.getCartLocal();
+          cart.push(product);
+          StorageManager.saveCartLocal(cart);
+        },
+
+        removeFromCart: (productId) => {
+          let cart = StorageManager.getCartLocal();
+          const index = cart.findIndex((item) => item.id === productId);
+          if (index !== -1) {
+            cart.splice(index, 1);
+            StorageManager.saveCartLocal(cart);
+          }
+          return cart;
+        },
+
+        addToFavorites: (product) => {
+          const favorites = StorageManager.getFavLocal();
+          if (!favorites.some((item) => item.id === product.id)) {
+            favorites.push(product);
+            StorageManager.saveFavLocal(favorites);
+            return true;
+          }
+          return false;
+        },
+
+        removeFromFavorites: (productId) => {
+          let favorites = StorageManager.getFavLocal();
+          favorites = favorites.filter((item) => item.id !== productId);
+          StorageManager.saveFavLocal(favorites);
+          return favorites;
+        },
+
+        clearCart: () => {
+          localStorage.removeItem("sepetimLocal");
+        },
+      };
+
+      function updateCounts() {
+        const cartCount = StorageManager.getCartLocal().length;
+        const favCount = StorageManager.getFavLocal().length;
+
+        $("#cartCount").text(cartCount);
+        $("#favCount").text(favCount);
+      }
+
+      // AJAX ile ürünleri tek seferde çek (eğer ürünler çok fazla olsaydı yükledikce çekerdim day2 ve day3 ödevi gibi)
       $.ajax({
         url: "https://fakestoreapi.com/products",
         method: "GET",
         success: (products) => {
+          allProducts = products;
+
           //ajaxdan çektiğim her bir veri için each kullandım
+
+          //slider için
+          $.each(products.slice(5, 12), (i, product) => {
+            //daha sonra tüm inline cssi buna dönüştür!!!!!
+            const $sliderCard = $("<div>").addClass("slide-card").css({
+              textAlign: "center",
+              justifyContent: "center",
+              display: "flex",
+              margin: "1rem",
+              flexDirection: "column",
+              alignItems: "center",
+              height: "320px",
+              border: "2px solid #ffcd49",
+              boxShadow: "0 0px 12px #ffcd49",
+              background: "white",
+              borderRadius: "25px",
+              padding: "1rem",
+            });
+
+            const $img = $("<img>")
+              .attr("src", product.image)
+              .attr("alt", product.title)
+              .css({
+                width: "150px",
+                height: "150px",
+                objectFit: "contain",
+              });
+
+            const $title = $("<h4>").text(product.title).css({
+              fontSize: "18px",
+              margin: "12px 0",
+            });
+
+            const $price = $("<p>").text(`${product.price} $`).css({
+              fontWeight: "bold",
+              fontSize: "28px",
+              margin: "0",
+              padding: "0",
+              color: "#ff7b00",
+            });
+
+            $sliderCard.append($img, $title, $price);
+            $(".slider").append($sliderCard);
+          });
+
+          // SLIDERRRRR
+          $(".slider").slick({
+            slidesToShow: 4,
+            slidesToScroll: 1,
+            infinite: true,
+            arrows: true,
+            autoplay: true,
+            prevArrow: $(".custom-prev"),
+            nextArrow: $(".custom-next"),
+            autoplaySpeed: 3000,
+            responsive: [
+              {
+                breakpoint: 768,
+                settings: {
+                  slidesToShow: 2,
+                },
+              },
+              {
+                breakpoint: 480,
+                settings: {
+                  slidesToShow: 1,
+                },
+              },
+            ],
+          });
+          /*slider kısmı yukarda*/
+
           $.each(products, (i, product) => {
             const doluYildiz = Math.round(product.rating.rate);
-            const yildiz = "★".repeat(doluYildiz) + "☆".repeat(5 - doluYildiz);
+            const bosYildiz =
+              "★".repeat(doluYildiz) + "☆".repeat(5 - doluYildiz);
 
             const productHtml = `
-                      <div class="product-card"
-                        style="
-                        border:1px solid #ccc;
-                        padding:10px;
-                        width:250px;
-                        border-radius:12px;
-                        box-shadow:0 0 10px #023ffa;
-                        margin-top:20px;" >
+              <div class="product-card" data-id="${product.id}" style="
+                padding:15px;
+                border-radius:12px;
+               border: 3px solid #ffcd49;
+                margin-top:10px;
+                background: white;
+                position: relative;
+              ">
+                <button class="addFavorite" data-id="${product.id}" style="
+                  position: absolute;
+                  top: 10px;
+                  right: 10px;
+                  background: transparent;
+                  border: none;
+                  font-size: 20px;
+                  color: #ccc;
+                  cursor: pointer;
+                ">
+                  <i class="fa-regular fa-heart"></i>
+                </button>
 
-                        <img src="${
-                          product.image
-                        }" alt="Image didn't load" width="100" height="200"/>
-                         <h3>${product.title}</h3>
-                         <p>${product.description.substring(0, 100)}...</p>
+                <div style="text-align: center;">
+                  <img src="${
+                    product.image
+                  }" alt="Image didn't load" style="width:100px; height:150px; object-fit:contain;"/>
+                </div>
+                
+                <h3 style="font-size: 16px; margin: 10px 0;">${
+                  product.title
+                }</h3>
+                <p style="color: #666; font-size: 14px;">${product.description.substring(
+                  0,
+                  100
+                )}...</p>
 
-                         <p class="price">${
-                           product.price
-                         } $ </p>  <div class="rate-div"
-                          style="
-                          display:flex;
-                          flex-direction:row;
-                          gap:1rem;
-                          " >
-                           <p>${product.rating.rate}</p>
-                                <p>${yildiz}</p>
-                           <p>${product.rating.count}</p>
-                          </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0;">
+                  <p class="price" style="font-size: 18px; font-weight: bold; color: #ff7b00;">${
+                    product.price
+                  } $</p>
+                  <div class="rate-div" style="display:flex; align-items: center; gap:0.5rem; font-size: 14px;">
+                    <span>${product.rating.rate}</span>
+                    <span style="color: #ffd700;">${bosYildiz}</span>
+                    <span>(${product.rating.count})</span>
+                  </div>
+                </div>
 
-                         <button class="addCartButon">Add Cart</button>
-                      </div>
-                   `;
+                <button class="addCartButon" data-id="${product.id}" style="
+                  width: 100%;
+                  border:1px solid #ff7b00;
+                  border-radius:8px;
+                  padding:12px;
+                  margin-top: 10px;
+                ">
+                  <i class="fa-solid fa-cart-shopping"></i>  Add to Cart
+                </button>
+              </div>
+            `;
 
-            $("#productList").append(productHtml);
+            $(".productList").append(productHtml);
           });
+
+          //önemli!!! localden çekmeler
+          renderSavedData();
+          updateCounts();
         },
         /*hala ajax içinde error*/
         error: () => {
-          $("#productList").html("<p> Product didnt load. </p>");
+          $(".productList").html(
+            "<p>Products couldn't load. Please try again.</p>"
+          );
         },
       });
 
+      // localStorage verilerini render et
+      function renderSavedData() {
+        const cartItems = StorageManager.getCartLocal();
+        const favItems = StorageManager.getFavLocal();
+
+        totalPrice = 0;
+
+        // Sepeti render et
+        $(".sepet").empty();
+        if (cartItems.length === 0) {
+          $(".sepet").html(
+            "<p style='text-align: center; color: #666;'>Your cart is empty.</p>"
+          );
+          $(".buyAndClearButtons").hide();
+        } else {
+          cartItems.forEach((item) => {
+            const cartCard = createProductCard(item, "cart");
+            $(".sepet").append(cartCard);
+            totalPrice += parseFloat(item.price);
+          });
+          $(".totalPriceDisplay").text(`Total: ${totalPrice.toFixed(2)} $`);
+          $(".buyAndClearButtons").show();
+        }
+
+        // favorileri render et
+        $(".favorites").empty();
+        if (favItems.length === 0) {
+          $(".favorites").html(
+            "<p style='text-align: center; color: #666;'>No favorites yet.</p>"
+          );
+        } else {
+          favItems.forEach((item) => {
+            const favCard = createProductCard(item, "favorites");
+            $(".favorites").append(favCard);
+          });
+        }
+
+        favItems.forEach((item) => {
+          $(`.addFavorite[data-id="${item.id}"] i`)
+            .removeClass("fa-regular")
+            .addClass("fa-solid heart-filled");
+        });
+      }
+
+      // products card
+      function createProductCard(product, type) {
+        const doluYildiz = Math.round(product.rating.rate);
+        const bosYildiz = "★".repeat(doluYildiz) + "☆".repeat(5 - doluYildiz);
+
+        let buttons = "";
+        if (type === "cart") {
+          buttons = `<button class="removeCart" data-id="${product.id}" style="width: 100%; background-color: #dc3545;">
+                       <i class="fa-solid fa-trash"></i> Remove from Cart
+                     </button>`;
+        } else if (type === "favorites") {
+          buttons = `
+            <button class="removeFavorite" data-id="${product.id}" style="width: 48%; background-color: #dc3545; margin-right: 4%;">
+          Remove from Favorites
+            </button>
+            <button class="addCartFromFav" data-id="${product.id}" style="width: 48%;">
+              <i class="fa-solid fa-cart-shopping"></i> Add to Cart
+            </button>
+          `;
+        }
+
+        return `
+          <div class="product-card" data-id="${product.id}" style="
+               border: 3px solid #ffcd49;
+            padding:15px;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+            background: white;
+            transform: scale(0.95);
+            border-left: 6px solid #07c621;
+                        border-right: 6px solid #07c621;
+
+          ">
+            <div style="text-align: center;">
+              <img src="${product.image}" alt="${
+          product.title
+        }" style="width:80px; height:120px; object-fit:contain;"/>
+            </div>
+            
+            <h3 style="font-size: 14px; margin: 10px 0;">${product.title}</h3>
+            <p style="color: #666; font-size: 12px;">${product.description.substring(
+              0,
+              100
+            )}...</p>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0;">
+              <p class="price" style="font-size: 16px; font-weight: bold; color: #ff7b00;">${
+                product.price
+              } $</p>
+              <div class="rate-div" style="display:flex; align-items: center; gap:0.3rem; font-size: 12px;">
+                <span>${product.rating.rate}</span>
+                <span style="color: #ffd700;">${bosYildiz}</span>
+                <span>(${product.rating.count})</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 10px;">
+              ${buttons}
+            </div>
+          </div>
+        `;
+      }
+
+      //DOCUMENT READY
       $(document).ready(() => {
+        //Toolbar scroll işlemleri
+        $("#productButton").click(function () {
+          $("html, body").animate(
+            { scrollTop: $("#productSection").offset().top - 160 },
+            100
+          );
+        });
+
+        $("#favButton").click(function () {
+          $("html, body").animate(
+            { scrollTop: $("#favSection").offset().top - 160 },
+            100
+          );
+        });
+
+        $("#cartButton").click(function () {
+          $("html, body").animate(
+            { scrollTop: $("#cartSection").offset().top - 160 },
+            100
+          );
+        });
+
         console.log("sayfa hazır");
 
+        //SEPETE EKLE
         //this olduğu zaman arrow func kullanılmıyor yeni öğrendim
-        $("#productList").on("click", ".addCartButon", function () {
-          const productCard = $(this).closest(".product-card");
+        $(document).on("click", ".addCartButon", function () {
+          const productId = $(this).data("id");
+          const product = allProducts.find((p) => p.id === productId);
 
-          const copyCard = productCard.clone();
-          copyCard.find(".addCartButon").remove();
-          $("#sepet").append(copyCard.hide().slideDown());
+          StorageManager.addToCart(product);
 
-          copyCard.css({
-            transform: "scale(0.8)",
-            opacity: "0.7",
-            border: "1px solid green",
-          });
+          //sepete ekleyince buton değişmesi
+          $(this).text("Added!").css("background-color", "#28a745");
+          setTimeout(() => {
+            $(this)
+              .html('<i class="fa-solid fa-cart-shopping"></i> Add to Cart')
+              .css("background-color", "rgb(255, 123, 0)");
+          }, 1500);
 
-          //localStrorage için
-          const productTitle = productCard.find("h3").text();
-          const productPrice = productCard.find(".price").text();
-          const cartItems =
-            JSON.parse(localStorage.getItem("sepetimLocal")) || [];
+          renderSavedData();
+          updateCounts();
+        });
 
-          cartItems.push({
-            title: productTitle,
-            price: productPrice,
-          });
+        // Favorilerden sepete ekle
+        $(document).on("click", ".addCartFromFav", function () {
+          const productId = $(this).data("id");
+          const product = allProducts.find((p) => p.id === productId);
 
-          localStorage.setItem("sepetimLocal", JSON.stringify(cartItems));
-
-          $(document).on("click", "#purchase", function () {
-            //toast ile değiştir yarın
-            alert("Purchase completed!");
-
-            localStorage.removeItem("sepetimLocal");
-            $("#sepet").empty().append("<p>Your cart is empty.</p>");
-          });
-
-          $(document).on("click", "#clear", function () {
-            //toast ile değiştir yarın
-            alert("Cart is cleared.");
-
-            localStorage.removeItem("sepetimLocal");
-            $("#sepet").empty().append("<p>Your cart is empty.</p>");
-          });
-
-          const cartButtons = `
-         <div>
-           <button id="purchase">Purchase All</button>
-           <button id="clear">Clear Cart</button>
-        </div>
-       `;
-
-          if (
-            $("#purchase").length === 0 &&
-            $("#clear").length === 0 &&
-            cartItems.length > 0
-          ) {
-            $("#buyAndClearButtons").show();
-            $("#buyAndClearButtons").append(cartButtons);
+          if (product) {
+            StorageManager.addToCart(product);
+            renderSavedData();
+            updateCounts();
           }
+        });
+
+        //SATIN ALMA BUTONU
+        $(document).on("click", ".purchase", function () {
+          //toast ile değiştir yarın
+
+          Toastify({
+            text: "Purchase successfully completed!",
+            duration: 2000,
+            gravity: "top",
+            position: "center",
+            backgroundColor: "#02b74e",
+          }).showToast();
+
+          StorageManager.clearCart();
+          renderSavedData();
+          updateCounts();
+        });
+
+        //TÜM SEPETİ TEMİZLE BUTONU
+        $(document).on("click", ".clear", function () {
+          //toast ile değiştir yarın
+          if (confirm("Are you sure you want to clear your cart?")) {
+            StorageManager.clearCart();
+            renderSavedData();
+            updateCounts();
+          }
+        });
+
+        // ÜRÜNÜ SEPETTEN ÇIKAR!
+        $(document).on("click", ".removeCart", function () {
+          const productId = $(this).data("id");
+          StorageManager.removeFromCart(productId);
+          renderSavedData();
+          updateCounts();
+        });
+
+        //favorilere ekle buton
+        $(document).on("click", ".addFavorite", function () {
+          const productId = $(this).data("id");
+          const product = allProducts.find((p) => p.id === productId);
+
+          if (product) {
+            const added = StorageManager.addToFavorites(product);
+
+            if (added) {
+              $(this)
+                .find("i")
+                .removeClass("fa-regular")
+                .addClass("fa-solid heart-filled");
+              renderSavedData();
+              updateCounts();
+            } else {
+              alert("Bu ürün zaten favorilerde.");
+            }
+          }
+        });
+
+        // Favori çıkar
+        $(document).on("click", ".removeFavorite", function () {
+          const productId = $(this).data("id");
+          StorageManager.removeFromFavorites(productId);
+
+          $(`.addFavorite[data-id="${productId}"] i`)
+            .removeClass("fa-solid heart-filled")
+            .addClass("fa-regular");
+
+          renderSavedData();
+          updateCounts();
         });
       });
     </script>
